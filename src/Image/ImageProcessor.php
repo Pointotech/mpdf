@@ -233,7 +233,7 @@ class ImageProcessor implements \Psr\Log\LoggerAwareInterface
         fclose($check);
         $file = $orig_srcpath;
         $this->logger->debug(sprintf('Fetching (file_get_contents) content of file "%s" with local basepath', $file), ['context' => LogContext::REMOTE_CONTENT]);
-        $data = file_get_contents($file);
+        $data = file_get_contents($file, false, $this->mpdf->streamContext);
         $type = $this->guesser->guess($data);
 
         $fetch_methods_used[] = 'FileGetContentsWithLocalBasePath';
@@ -242,7 +242,7 @@ class ImageProcessor implements \Psr\Log\LoggerAwareInterface
       if ($file && !$data && $check = @fopen($file, 'rb')) {
         fclose($check);
         $this->logger->debug(sprintf('Fetching (file_get_contents) content of file "%s" with non-local basepath', $file), ['context' => LogContext::REMOTE_CONTENT]);
-        $data = file_get_contents($file);
+        $data = file_get_contents($file, false, $this->mpdf->streamContext);
         $type = $this->guesser->guess($data);
 
         $fetch_methods_used[] = 'FileGetContentsWithRemoteBasePath';

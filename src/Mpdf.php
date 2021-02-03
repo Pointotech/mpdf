@@ -165,6 +165,21 @@ class Mpdf implements \Psr\Log\LoggerAwareInterface
   var $useSubstitutions;
   var $CSSselectMedia;
 
+  /**
+   * A valid context resource created with `stream_context_create`. This will be
+   * passed into `file_get_contents` as the `context` parameter when fetching
+   * image resources.
+   * 
+   * This can be used to customize the HTTP headers when fetching images over
+   * HTTP.
+   * 
+   * This is not used when fetching anything other than images, and it is not
+   * used when fetching images with methods other than `file_get_contents`.
+   * 
+   * @var resource|null
+   */
+  var $streamContext = null;
+
   var $forcePortraitHeaders;
   var $forcePortraitMargins;
   var $displayDefaultOrientation;
