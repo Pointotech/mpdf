@@ -152,6 +152,8 @@ class ImageProcessor implements \Psr\Log\LoggerAwareInterface
 
   public function getImage(&$file, $firsttime = true, $allowvector = true, $orig_srcpath = false, $interpolation = false)
   {
+    $fetch_methods_used = [];
+
     /**
      * Prevents insecure PHP object injection through phar:// wrapper
      * @see https://github.com/mpdf/mpdf/issues/949
@@ -174,12 +176,16 @@ class ImageProcessor implements \Psr\Log\LoggerAwareInterface
       }
       $data = $this->mpdf->imageVars[$v[1]];
       $file = md5($data);
+
+      $fetch_methods_used[] = 'ImageVariable';
     }
 
     if (preg_match('/data:image\/(gif|jpe?g|png);base64,(.*)/', $file, $v)) {
       $type = $v[1];
       $data = base64_decode($v[2]);
       $file = md5($data);
+
+      $fetch_methods_used[] = 'Base64';
     }
 
     // mPDF 5.7.4 URLs
@@ -229,6 +235,8 @@ class ImageProcessor implements \Psr\Log\LoggerAwareInterface
         $this->logger->debug(sprintf('Fetching (file_get_contents) content of file "%s" with local basepath', $file), ['context' => LogContext::REMOTE_CONTENT]);
         $data = file_get_contents($file);
         $type = $this->guesser->guess($data);
+
+        $fetch_methods_used[] = 'FileGetContentsWithLocalBasePath';
       }
 
       if ($file && !$data && $check = @fopen($file, 'rb')) {
@@ -236,6 +244,8 @@ class ImageProcessor implements \Psr\Log\LoggerAwareInterface
         $this->logger->debug(sprintf('Fetching (file_get_contents) content of file "%s" with non-local basepath', $file), ['context' => LogContext::REMOTE_CONTENT]);
         $data = file_get_contents($file);
         $type = $this->guesser->guess($data);
+
+        $fetch_methods_used[] = 'FileGetContentsWithRemoteBasePath';
       }
 
       if ((!$data || !$type) && function_exists('curl_init')) { // mPDF 5.7.4
@@ -243,6 +253,8 @@ class ImageProcessor implements \Psr\Log\LoggerAwareInterface
         if ($data) {
           $type = $this->guesser->guess($data);
         }
+
+        $fetch_methods_used[] = 'Curl';
       }
 
       if ((!$data || !$type) && !ini_get('allow_url_fopen')) { // only worth trying if remote file and !ini_get('allow_url_fopen')
@@ -250,11 +262,13 @@ class ImageProcessor implements \Psr\Log\LoggerAwareInterface
         if ($data) {
           $type = $this->guesser->guess($data);
         }
+
+        $fetch_methods_used[] = 'Socket';
       }
     }
 
     if (!$data) {
-      return $this->imageError($file, $firsttime, 'Could not find image file');
+      return $this->imageError($file, $firsttime, 'Could not find image file (fetch methods: [' . implode(', ', $fetch_methods_used) . '])');
     }
 
     if ($type === null) {
